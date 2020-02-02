@@ -332,6 +332,26 @@ def Experiment2(X_train , y_train , X_test , y_test) :
     theta_hist , loss_hist = batch_grad_descent(X_train , y_train , num_iter = 200 , alpha = 0.1)
     print (loss_hist[-1])
 
+def Experiment3(X_train , y_train , X_test , y_test) :
+    '''
+    实验三讨论了BGD和SGD的收敛效率和稳定性的区别.从图中可以看出,SGD迅速下降到局部最优解附近,且反复震荡.
+    '''
+    plt.figure(figsize = (16 , 16))
+    num_iter = 20000
+    step_size = 200
+    plt.xlim(0 , num_iter)
+    plt.ylim(0 , 1)
+    theta_hist , loss_hist = batch_grad_descent(X_train , y_train , alpha = 0.01 , num_iter = num_iter)
+    #print (loss_hist[-1])
+    x_cord = [step_size * i for i in range(int(num_iter / step_size))]
+    y_cord = [np.log10(loss_hist[step_size * i + 1]) for i in range(int(num_iter / step_size))]
+    plt.plot(x_cord , y_cord , color = 'G')
+    theta_hist , loss_hist =stochastic_grad_descent(X_train , y_train , alpha = 0.01 , lambda_reg = 0 , B = 0 , num_iter = num_iter)
+    #print (loss_hist[-1][-1])
+    y_cord = [np.log10(loss_hist[step_size * i][-1]) for i in range(int(num_iter / step_size))]
+    plt.plot(x_cord , y_cord , color = 'R')
+    plt.show()
+
 
 
 #主函数 , 读取并划分数据集
@@ -355,6 +375,8 @@ def main():
     Experiment1(X_train , y_train , X_test , y_test)
     print ('Experiment2')
     Experiment2(X_train , y_train , X_test , y_test)
+    print ('Experiment3')
+    Experiment3(X_train , y_train , X_test , y_test)
 
 
 if __name__ == "__main__":
