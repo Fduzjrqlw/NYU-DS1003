@@ -278,7 +278,7 @@ def Experiment2(X_train , y_train , X_valid , y_valid) :
 
 def Experiment3(X_train , y_train , X_valid , y_valid) :
     '''
-    实验2验证了投影梯度下降法来求解Lasso回归,选取不同大小的正则化系数lambda,观察系数的变化
+    实验3验证了投影梯度下降法来求解Lasso回归,选取不同大小的正则化系数lambda,观察系数的变化
     '''
     theta1 = np.ones(X_train.shape[1])
     theta2 = np.zeros(X_train.shape[1])
