@@ -207,6 +207,44 @@ def Coordinate_Descent(X , y , theta , num_iter = 2000 ,  lambda_reg = 0.015) :
         loss_hist[step] = compute_L1_square_loss(X , y , theta , lambda_reg)
     return theta_hist , loss_hist
 
+def projected_gradient_descent(X , y , theta1 , theta2 , alpha = 0.015 ,  num_iter = 10000 , lambda_reg = 0.015) :
+    '''
+    用投影梯度下降法解决Lasso回归问题.将参数theta进行分解为正部theta1和负部theta2,将原来无约束不可微的凸优化问题转换成了
+    带约束的可微的凸优化问题.
+    Args:
+    X - 输入特征数据 , 二维numpy数组(num_instances , num_features)
+    y - 标签label数据 , 一维numpy数组(num_instances)
+    theta1 - 模型参数正部 , 一维numpy数组(num_features)
+    theta2 - 模型参数负部 , 一维numpy数组(num_features)    theta = theta1 - theta2
+    alpha - 学习率 , 标量
+    num_iter - 最大迭代次数 , 标量
+    lambda_reg - 正则化项系数 , 标量
+    Returns:
+    theta_hist - 迭代过程中储存的参数列表 , 二维numpy数组(num_iter , num_features)
+    loss_hist - 迭代过程中储存的loss列表,一维numpy数组(num_iter)
+    '''
+    [num_instances , num_features] = X.shape
+    
+    theta_hist = np.zeros((num_iter , num_features))
+    loss_hist = np.zeros(num_iter)
+    e = np.ones(num_features)
+    
+    for i in range(num_iter) :
+        grad_theta1 = np.matmul(X.T , np.matmul(X , theta1 - theta2) - y) / num_instances + lambda_reg * e
+        grad_theta2 = np.matmul(X.T , np.matmul(X , theta2 - theta1) + y) / num_instances + lambda_reg * e
+        
+        theta1 -= alpha * grad_theta1
+        theta2 -= alpha * grad_theta2
+        
+        theta1 = np.maximum(0 , theta1)
+        theta2 = np.maximum(0 , theta2)
+        
+        theta_hist[i] = theta1 - theta2
+        loss_hist[i] = compute_L1_square_loss(X , y , theta1 - theta2 , lambda_reg)
+        
+    return theta_hist , loss_hist
+
+
 def Experiment1(X_train , y_train , X_valid , y_valid):
     '''
     实验1 Ridge regression,注意没有bias term.比较了手写的梯度下降法和sklearn包中的SMO求解的效率和精度的差距.
@@ -238,12 +276,24 @@ def Experiment2(X_train , y_train , X_valid , y_valid) :
     print (theta_hist[-1])
     print (loss_hist[-1])
 
+def Experiment3(X_train , y_train , X_valid , y_valid) :
+    '''
+    实验2验证了投影梯度下降法来求解Lasso回归,选取不同大小的正则化系数lambda,观察系数的变化
+    '''
+    theta1 = np.ones(X_train.shape[1])
+    theta2 = np.zeros(X_train.shape[1])
+    theta_hist , loss_hist = projected_gradient_descent(X_train , y_train , theta1 , theta2)
+    print (theta_hist[-1])
+    print (loss_hist[-1])
+
 def main() :
     X , y , true_theta = data_construction()
     X_train , y_train , X_valid ,  y_valid , X_test , y_test = data_split(X , y)
     X_train , X_valid , X_test = feature_normlization(X_train , X_valid , X_test)
     model = Experiment1(X_train , y_train , X_valid , y_valid)
     Experiment2(X_train , y_train , X_valid , y_valid)
+    Experiment3(X_train , y_train , X_valid , y_valid)
+    
 
 
 
