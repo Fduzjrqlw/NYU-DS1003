@@ -155,6 +155,21 @@ def update(w , X , scale) :
     for k , v in X.items() :
         w[k] = w.get(k , 0) + scale * v
 
+def compute_Gram(X) :
+    '''
+    计算并存储关于X的Gram矩阵. G[i][j] = sparse_dotProduct(X_i,X_j)
+    Args:
+        X - 样本的稀疏特征表示输入 , 一维list(num_instances) , 每一位都是特征对应的字典
+    Returns:
+        G - Gram矩阵 , 二维numpy数组(num_instances , num_instances)
+    '''
+    num_instances = len(X)
+    G = np.zeros((num_instances , num_instances))
+    for i in range(num_instances) :
+        for j in range(num_instances) :
+            G[i][j] = dotProduct(X[i] , X[j])
+    return G
+
 def pegasos(X_train , y_train , X_valid , y_valid , w , num_iter = 50 , lambda_reg = 0.01) :
     '''
     peagsos算法计算SVM的最优参数.实际上peagsos算法是应用在SVM损失函数上的次梯度随机下降法.
@@ -219,6 +234,60 @@ def pegasos_tricks(X_train , y_train , X_valid , y_valid , w , num_iter = 10 , l
     for k , v in w.items() :
         w[k] = v * scale
     return w
+
+def SMO(X_train , y_train ,X_valid , y_valid , G , num_iter = 50 , lambda_reg = 0.007) :
+    '''
+    利用SMO(sequential minimal optimization)求解SVM的对偶问题.SVM对偶问题是n个变量带约束的二次规划问题,基本思路是每次选取出两个变量alpha_i,alpha_j,固定其他变量,将问题转换
+    为二元二次函数的最优化问题,利用KKT条件消掉其中一个变量(如alpha[j]),将问题化为关于alpha[i]的一元二次最优化问题.注意最后的结果要满足KKT条件的限制,因此要做截断.
+    Args:
+        X_train - 测试集输入 , 一维lsit(train_size) , 每一位都是特征对应的字典
+        y_train - 测试集标签 , 一维lsit(train_size) 
+        X_valid - 测试集输入 , 一维lsit(valid_size) , 每一位都是特征对应的字典
+        y_valid - 测试集标签 , 一维lsit(valid_size) 
+        G - Gram矩阵 , 二维numpy数组(num_instances , num_instances)
+        num_iter - 最大迭代轮数 , 标量
+        lambda_reg - 正则化系数 , 标量
+    Returns:
+        w - 模型参数 , 字典
+        alpha - 关于margin约束的Lagrange系数 , 一维numpy数组(num_instances)
+    '''
+    C = 1 / lambda_reg
+    num_instances = len(X_train)
+    alpha = np.zeros(num_instances)
+    for d in range(num_iter) :
+        for i in range(num_instances) :
+            j = 0
+            while True :
+                j = np.random.randint(num_instances) 
+                if (i != j) :
+                    break
+            B = 1 - y_train[i] * y_train[j]
+            D = 0
+            A = 2 * G[i][j] - G[i][i] - G[j][j]
+            if (A == 0) :
+                continue
+            for k in range(num_instances) :
+                if (k == i or k == j) :
+                    continue
+                D += alpha[k] * y_train[k]
+                B += y_train[i] * y_train[k] * alpha[k] * (G[j][k] + G[i][j] - G[j][j] - G[i][k])
+            alpha[i] = -1 * B / A
+            if (y_train[i] * y_train[j] > 0) :
+                if (alpha[i] < max(0 , -1 * C / num_instances - D * y_train[j])) :
+                    alpha[i] = max(0 , -1 * C / num_instances - D * y_train[j])
+                elif (alpha[i] > min(-D * y_train[j] , C / num_instances)) :
+                    alpha[i] = min(-D * y_train[j] , C / num_instances)
+            if (y_train[i] * y_train[j] < 0) :
+                if (alpha[i] < max(0 , D * y_train[j])) :
+                    alpha[i] = max(0 , D * y_train[j])
+                elif (alpha[i] > min(C / num_instances , C / num_instances + D * y_train[j])) :
+                    alpha[i] = min(C / num_instances , C / num_instances + D * y_train[j])
+            alpha[j] = -1 * D * y_train[j] - alpha[i] * y_train[i] * y_train[j]
+                
+    w = {}
+    for i in range(num_instances) :
+        update(w , X_train[i] , alpha[i] * y_train[i])
+    return w , alpha
 
 def calc_accuracy(X , y , w) :
     '''
@@ -340,6 +409,25 @@ def Experiment4(X_train , y_train , X_valid , y_valid , lambda_reg = 0.007) :
     print (w['boring'])
     print (w['great'])
 
+def Experiment5(X_train , y_train , X_valid , y_valid , lambda_reg = 0.007) :
+    '''
+    实验五,测试SMO算法的效率和准确率.
+    Args:
+        X_train - 测试集输入 , 一维lsit(train_size) , 每一位都是特征对应的字典
+        y_train - 测试集标签 , 一维lsit(train_size) 
+        X_valid - 测试集输入 , 一维lsit(valid_size) , 每一位都是特征对应的字典
+        y_valid - 测试集标签 , 一维lsit(valid_size) 
+        lambda_reg - 正则化系数 , 标量
+    Returns:
+        None
+    '''
+    G = compute_Gram(X_train)
+    start_time = time.time()
+    w , alpha = SMO(X_train , y_train , X_valid , y_valid , G)
+    end_time = time.time()
+    print (end_time - start_time)
+    calc_accuracy(X_valid , y_valid , w)
+
 def main() :
     '''
     主函数,对电影评论文本数据进行了读取,特征抽取,并训练模型分别进行了实验一到实验四,加强了对SVM的理解和认识.
@@ -367,8 +455,8 @@ def main() :
     best_lambda = Experiment1(X_train , y_train , X_valid , y_valid)
     Experiment2(X_train , y_train , X_valid , y_valid , review , best_lambda)
     Experiment3(X_train , y_train , X_valid , y_valid , best_lambda)
-
-
+    Experiment4(X_train , y_train , X_valid , y_valid , best_lambda)
+    Experiment5(X_train , y_train , X_valid , y_valid)
 
 if __name__ == "__main__" :
     main()
