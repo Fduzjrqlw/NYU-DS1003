@@ -381,7 +381,7 @@ def Experiment3(X_train , y_train , X_valid , y_valid , lambda_reg = 0.007) :
         y_valid - 测试集标签 , 一维lsit(valid_size) 
         lambda_reg - 正则化系数 , 标量
     Returns:
-        num_sv
+        num_sv - 支持向量个数 , 标量
     '''
     w = {}
     w = pegasos_tricks(X_train , y_train , X_valid , y_valid , w , num_iter = 50 , lambda_reg = lambda_reg)
@@ -427,6 +427,25 @@ def Experiment5(X_train , y_train , X_valid , y_valid , lambda_reg = 0.007) :
     end_time = time.time()
     print (end_time - start_time)
     calc_accuracy(X_valid , y_valid , w)
+
+def Experiment6(X_train , y_train , X_valid , y_valid , w) :
+    '''
+    实验六,利用SMO优化出的SVM模型支持向量个数.
+    Args:
+        X_train - 测试集输入 , 一维lsit(train_size) , 每一位都是特征对应的字典
+        y_train - 测试集标签 , 一维lsit(train_size) 
+        X_valid - 测试集输入 , 一维lsit(valid_size) , 每一位都是特征对应的字典
+        y_valid - 测试集标签 , 一维lsit(valid_size) 
+        w - 模型参数 , 字典
+    Returns:
+        num_svm - 支持向量个数
+    '''
+    num_svm = 0
+    for i in range(len(alpha)) :
+        if (abs(alpha[i]) > 1e-5) :
+            num_svm += 1
+    return num_svm
+
 
 def main() :
     '''
