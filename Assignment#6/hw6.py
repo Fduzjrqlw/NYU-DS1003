@@ -168,8 +168,6 @@ def compute_gini(label_array):
     Returns:
         gini - gini值
     '''
-    # Your code goes here
-    
     label_cnt = Counter(label_array.reshape(len(label_array)))
     gini = 1.0
     for k , v in label_cnt.items() :
